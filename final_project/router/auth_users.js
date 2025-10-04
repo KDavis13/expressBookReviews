@@ -20,19 +20,40 @@ const authenticatedUser = (username,password)=>{ //returns boolean
 //only registered users can login
 regd_users.post("/login", (req,res) => {
   const { username, password } = req.body;
+  console.log('[LOGIN] Body recibido:', { username, password });
   if (authenticatedUser(username, password)) {
     const token = jwt.sign({ username }, "access", { expiresIn: "1h" });
     req.session.authorization = token;
+    console.log('[LOGIN] Token generado y guardado en session.authorization');
+    console.log('[LOGIN] Session ahora:', req.session);
     return res.status(200).json({message: "User successfully logged in"});
   } else {
+    console.log('[LOGIN] Credenciales inválidas');
     return res.status(401).json({message: "Invalid username or password"});
   }
 });
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+  const { isbn } = req.params;
+  const { review } = req.body;
+  console.log('[REVIEW] Intento de agregar review. Params:', isbn, 'Body:', review);
+  if(!req.user){
+    console.log('[REVIEW] req.user no está definido (middleware no pasó)');
+    return res.status(401).json({message: 'Not authorized (no user in request)'});
+  }
+  const username = req.user.username;
+  console.log('[REVIEW] Usuario autenticado detectado:', username);
+
+  const book = Object.values(books).find(b => b.isbn === isbn);
+  if (book) {
+    book.reviews[username] = review;
+    console.log('[REVIEW] Review almacenada correctamente');
+    return res.status(200).json({message: "Review added/updated successfully"});
+  } else {
+    console.log('[REVIEW] Libro no encontrado para ISBN', isbn);
+    return res.status(404).json({message: "Book not found"});
+  }
 });
 
 module.exports.authenticated = regd_users;
